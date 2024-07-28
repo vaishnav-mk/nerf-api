@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, JSONResponse
 import uuid
 import shutil
 from pathlib import Path
+import time 
 
 app = FastAPI()
 
@@ -11,13 +12,21 @@ BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 running_processes = {}
 
-# def process_images(uuid_str: str, folder_path: Path):
-#     time.sleep(10)  
-#     output_file = folder_path / "output.glb"
-#     with output_file.open("w") as f:
-#         f.write("Processing complete.")  
-#     running_processes.pop(uuid_str, None)
-#     return output_file
+def process_images(uuid_str: str, folder_path: Path):
+    time.sleep(10)
+    
+    allowed_extensions = {".jpg", ".jpeg", ".png"}
+    
+    images = [img for img in folder_path.iterdir() if img.suffix.lower() in allowed_extensions]
+    print(f"Images: {images}")
+    
+    output_file = folder_path / "output.txt"
+    with output_file.open("w") as f:
+        for image in images:
+            f.write(f"Processed image: {image.name}\n")
+    
+    running_processes.pop(uuid_str, None)
+    
 
 @app.post("/upload-images/")
 async def upload_images(files: list[UploadFile], background_tasks: BackgroundTasks):
