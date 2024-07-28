@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  fastapi-app:
+    image: nerf-api
+    build: .
+    ports:
+      - "8000:8000"
+  
+  ngrok:
+    image: ngrok/ngrok:latest
+    environment:
+      - NGROK_AUTHTOKEN=${AUTH}
+    command: http 8000
+    depends_on:
+      - fastapi-app
+    network_mode: host
