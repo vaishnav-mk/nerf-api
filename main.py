@@ -1,6 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
-import uuid
 import shutil
 from pathlib import Path
 import time 
@@ -20,20 +19,21 @@ def process_images(uuid_str: str, folder_path: Path):
     images = [img for img in folder_path.iterdir() if img.suffix.lower() in allowed_extensions]
     print(f"Images: {images}")
     
-    output_file = folder_path / "output.txt"
-    with output_file.open("w") as f:
-        for image in images:
-            f.write(f"Processed image: {image.name}\n")
+    source_output_file = Path("./output.glb")
+    destination_output_file = folder_path / "output.glb"
+    
+    shutil.copy(source_output_file, destination_output_file)
     
     running_processes.pop(uuid_str, None)
     
 
 @app.post("/upload-images/")
-async def upload_images(files: list[UploadFile], background_tasks: BackgroundTasks):
+async def upload_images(files: list[UploadFile], unique_id: str, background_tasks: BackgroundTasks):
     
-    unique_id = str(uuid.uuid4())
     upload_folder = BASE_DIR / unique_id
     upload_folder.mkdir(parents=True, exist_ok=True)
+    
+    print("unique_id", unique_id)
 
     
     for file in files:
