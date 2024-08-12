@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 import shutil
+import os
+import subprocess
 from pathlib import Path
 import time 
 
@@ -11,19 +13,36 @@ BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 running_processes = {}
 
+def postprocess_obj(obj_file: Path, input_file: Path, output_file: Path):
+    print(f"Converting {input_file} to {output_file}")
+    try:
+        subprocess.run([f"gltfpack -i {input_file} -o {output_file}"], shell=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error converting {input_file} to gltf: {e}")
+    else:
+        print("Conversion complete")
+
 def process_images(uuid_str: str, folder_path: Path):
     time.sleep(10)
     
     allowed_extensions = {".jpg", ".jpeg", ".png"}
     
     images = [img for img in folder_path.iterdir() if img.suffix.lower() in allowed_extensions]
-    print(f"Images: {images}")
     
-    source_output_file = Path("./output.glb")
-    destination_output_file = folder_path / "output.glb"
+    source_output_folder = Path("./output")
+    destination_output_folder = folder_path / "output"
     
-    shutil.copy(source_output_file, destination_output_file)
+    os.makedirs(destination_output_folder, exist_ok=True)
     
+    for file in source_output_folder.iterdir():
+        if file.is_file():
+            shutil.copy(file, destination_output_folder / file.name)
+            
+    obj_file = next((f for f in destination_output_folder.iterdir() if f.suffix.lower() == ".obj"), None)
+    
+    if obj_file:
+        output_file = destination_output_folder / f"{obj_file.stem}.glb"
+        postprocess_obj(obj_file, obj_file, output_file)    
     running_processes.pop(uuid_str, None)
     
 
@@ -72,3 +91,4 @@ async def get_processed_images():
 @app.get("/")
 async def health():
     return {"status": "ok", "running_processes": len(running_processes), "urls": [f"/status/{uuid_str}" for uuid_str in running_processes]}
+    
